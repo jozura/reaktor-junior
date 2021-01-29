@@ -5,7 +5,7 @@ const app = express();
 const redis = require('redis');
 const { fork } = require('child_process');
 
-const child = fork(__dirname + "/src/updateDb");
+const child = fork(__dirname + "/src/composeData");
 const redisClient = redis.createClient({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT || 6379,
