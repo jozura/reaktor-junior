@@ -15,9 +15,9 @@ const redisClient = redis.createClient({
 redisClient.set('test', 'value')
 
 app.get('/products', (req, res) => {
-  redisClient.get('test', (err, repl) => {
+  redisClient.hgetall('beanies', (err, repl) => {
     if (err) throw err;
-
+    console.log(repl)
     res.send(`<h1>${repl}</h1>`)
   })
 })
