@@ -27,39 +27,32 @@ function searchForManufacturers(products) {
             manufacturers.add(product.manufacturer);
         }
     }
-    manufacturers = Array.from(manufacturers)
-    return manufacturers;
+
+    return Array.from(manufacturers)
 };
 
-function requestAvailabilityData(manufacturers) {
-    let availabilityRequests = manufacturers.map((manufacturer) => 
-        axios.get(`${API_SERVICE_URL}/availability/${manufacturer}`
-    ))
-    
-    let availabilityDataResponses = Promise.all(availabilityRequests);
-    
-    return availabilityDataResponses;
-}
+async function getAvailabilityData(manufacturer, tries = 5){
+    if (tries === 0) {
+        throw `Failed to get availability data for ${manufacturer}.`
+    }
 
-// This probably needs refactoring
-async function getAvailabilityData(manufacturers, max_depth){
-    let availabilityDataResponses = await requestAvailabilityData(manufacturers);
-    let allAvailabilityData = [];
-    let buggedOutRequests = [];
-    availabilityDataResponses.forEach((response, i) => {
-        if (response.data.response === '[]'){
-            buggedOutRequests.push(manufacturers[i]);
-        } else {
-            let availabilityData = response.data.response;
-            let manufacturer = manufacturers[i];
-            if(availabilityData) allAvailabilityData.push([manufacturer, availabilityData]);
-        }
-    })
+    let request;
+    try {
+        request = axios.get(`${API_SERVICE_URL}/availability/${manufacturer}`);
+    } catch (error) {
+        throw(error);
+    }
+    let response = await request;
 
-    if (!buggedOutRequests.length || max_depth == 0){
-        return allAvailabilityData;
+    let availabilityData = response.data.response;
+    if(availabilityData) {
+        if(availabilityData !== "[]") return availabilityData;
     } else {
-        return allAvailabilityData.concat(await getAvailabilityData(buggedOutRequests, max_depth - 1))
+        throw `Availability data request didn't contain a response for ${manufacturer}.`;
+    }
+
+    if(tries > 0) {
+        return getAvailabilityData(manufacturer, tries - 1)
     }
 }
 
@@ -110,14 +103,17 @@ async function composeData(){
     allProductsResponses = await requestAllProducts()
     allProducts = allProductsResponses.map(response => response.data)
     manufacturers = searchForManufacturers(allProducts);
-    allAvailabilityData = await getAvailabilityData(manufacturers, 5);
 
     let availability = {}
-    allAvailabilityData.forEach(data => {
-        let manufacturer = data[0];
-        let availabilityData = data[1];
-        let manufacturerAvailabilityMap = getProductIDAndInstockvalue(availabilityData);
-        availability[manufacturer] = manufacturerAvailabilityMap;
+    manufacturers.forEach(manufacturer => {
+        let availabilityData;
+        try {
+            availabilityData = await getAvailabilityData(manufacturer);
+        } catch(error) {
+            console.error(error);
+            return
+        }
+        availability[manufacturer] = getProductIDAndInstockvalue(availabilityData);
     })
 
     finalProductData = []
