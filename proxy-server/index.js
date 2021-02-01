@@ -15,10 +15,15 @@ const redisClient = redis.createClient({
 redisClient.set('test', 'value')
 
 app.get('/products', (req, res) => {
-  redisClient.hgetall('beanies', (err, repl) => {
+
+  let start = process.hrtime()
+  redisClient.get('beanies', (err, repl) => {
     if (err) throw err;
     console.log(repl)
     res.send(`<h1>${repl}</h1>`)
+    JSON.parse(repl)
+    let end = process.hrtime(start)
+    console.log(`${end[0]}s ${end[1]/1000000}ms`)
   })
 })
 
