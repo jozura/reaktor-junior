@@ -1,27 +1,30 @@
-// A script that gets all the data from both APIs and composes it into a better format.
+// A function that fetches and merges the product and availability data.
+module.exports = {
+    composeData: composeData
+};
 
-const redis = require('redis');
+async function composeData(){
+    let products = await fetchProducts();
+    let manufacturers = getManufacturers(products);
+    let availabilityData = await fetchAvailabilityData(manufacturers);
+    let instockData = getInstockData(availabilityData);
+    products = appendInstockDataToProducts(products, instockData);
+
+    return products;
+}
+
 const axios = require("axios");
-const {promisify} = require('util');
+const constants = require("./constants");
 
-const PRODUCT_CATEGORIES = ['facemasks', 'gloves' , 'beanies']
-const API_SERVICE_URL = "https://bad-api-assignment.reaktor.com/v2";
+const PRODUCT_CATEGORIES = constants.PRODUCT_CATEGORIES;
+const API_SERVICE_URL = constants.API_URL;
 
-const redisClient = redis.createClient({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASS 
-});
-
-const hsetAsync = promisify(redisClient.hset).bind(redisClient);
-
-
-async function getAllProducts() {
+async function fetchProducts() {
     let productRequests = PRODUCT_CATEGORIES.map((category) =>
         axios.get(`${API_SERVICE_URL}/products/${category}`));
 
     let results = await Promise.allSettled(productRequests);
-    let productData = []
+    let productData = [];
     results.forEach((result) => {
         if(result.status === "fulfilled") {
             productData.push(result.value.data);
@@ -33,45 +36,44 @@ async function getAllProducts() {
     return productData;
 };
 
-function searchForManufacturers(products) {
+function getManufacturers(products) {
     let manufacturers = new Set();
 
     for(productCategory of products){
-        for(product of productCategory){
+        productCategory.forEach(product => {
             manufacturers.add(product.manufacturer);
-        }
+        });
     }
 
     return Array.from(manufacturers);
 };
 
-async function getAvailabilityData(manufacturer, tries = 5){
+async function fetchManufacturerAvailability(manufacturer, tries = 5){
     if (tries === 0) {
-        throw `Failed to get availability data for ${manufacturer}.`
+        throw new Error(`Failed to get availability data for ${manufacturer}.`);
     }
 
-    let request;
+    let response;
     try {
-        request = axios.get(`${API_SERVICE_URL}/availability/${manufacturer}`);
+        response = await axios.get(`${API_SERVICE_URL}/availability/${manufacturer}`);
     } catch (error) {
-        throw(error);
+        throw new Error(error);
     }
-    let response = await request;
 
     let availabilityData = response.data.response;
     if(availabilityData) {
-        if(availabilityData !== "[]") return availabilityData;
+        if(availabilityData !== "[]") {
+            return availabilityData;
+        } else {
+            return fetchManufacturerAvailability(manufacturer, tries - 1);
+        }
     } else {
-        throw `Availability data request didn't contain a response for ${manufacturer}.`;
+        throw new Error(`Availability data request didn't contain a response for ${manufacturer}.`);
     }
+};
 
-    if(tries > 0) {
-        return getAvailabilityData(manufacturer, tries - 1)
-    }
-}
-
-async function getAllAvailabilityData(manufacturers) {
-    let requests = manufacturers.map(manufacturer => getAvailabilityData(manufacturer));
+async function fetchAvailabilityData(manufacturers) {
+    let requests = manufacturers.map(manufacturer => fetchManufacturerAvailability(manufacturer));
     let results = await Promise.allSettled(requests);
     let availabilityData = [];
     results.forEach((result, i) => {
@@ -83,74 +85,53 @@ async function getAllAvailabilityData(manufacturers) {
     });
 
     return availabilityData;
+};
+
+function getInstockValue(productData) {
+    let instockTag = "<INSTOCKVALUE>";
+    let instockTagLength = instockTag.length;
+
+    let instockValueStartIndex = productData.indexOf(instockTag) + instockTagLength;
+    let tempString = productData.substring(instockValueStartIndex);
+    let instockValue = tempString.substring(0, tempString.indexOf("<"));
+
+    return instockValue;
 }
 
-function getProductInstockValue(availabilityData){
-    let instockTag = "<INSTOCKVALUE>";
+function getInstockData(availabilityData){
     let instockMap = {};
-    let instockTagLength = instockTag.length;
-    for(productData of availabilityData) {
-        let dataPayload = productData.DATAPAYLOAD;
-        let productId = productData.id;
-        let instockValueStartIndex = dataPayload.indexOf(instockTag) + instockTagLength;
-        let tempString = dataPayload.substring(instockValueStartIndex);
-        let instockValue = tempString.substring(0, tempString.indexOf("<"));
-        instockMap[productId] = instockValue;
+
+    for(manufacturerData of availabilityData) {
+        let manufacturer = manufacturerData[0];
+        let manufacturerAvailabilityData = manufacturerData[1];
+
+        let manufacturerInstockMap = {};
+        manufacturerAvailabilityData.forEach(productData => {
+            let productId = productData.id;
+            let dataPayload = productData.DATAPAYLOAD;
+            let instockValue = getInstockValue(dataPayload);
+            manufacturerInstockMap[productId] = instockValue;
+        })
+
+        instockMap[manufacturer] = manufacturerInstockMap;
     }
 
     return instockMap;
-}
+};
 
-function mergeProductAndAvailabilityData(productsOfCategory, availability){
-    let products = []
-    for(product of productsOfCategory) {
-        let manufacturer = product.manufacturer;
-        product["availability"] = availability[manufacturer][product.id.toUpperCase()];
-        products.push(product);
-    }
+function appendInstockDataToProducts(products, instockData){
+    let productData = [];
+    for(productCategory of products) {
+        let productsOfCategory = [];
 
-    return products;
-}
-
-function storeData(finalProductData){
-    let promises = []
-    for(productCategory of finalProductData){
-        category = productCategory[0].type
         productCategory.forEach(product => {
-            let productId = product.id;
-            promises.push(hsetAsync(category,
-                             productId,
-                             JSON.stringify(product)
-                             ));
-        });
+            let manufacturer = product.manufacturer;
+            // Availability API has product IDs in all uppercase hence 'id.toUpperCase'
+            product["availability"] = instockData[manufacturer][product.id.toUpperCase()];
+            productsOfCategory.push(product);
+        })
+        productData.push(productsOfCategory);
     }
 
-    return Promise.allSettled(promises);
-}
-
-async function composeData(){
-    let productData = await getAllProducts();
-    let manufacturers = searchForManufacturers(productData);
-    console.log(manufacturers);
-    let availabilityData = await getAllAvailabilityData(manufacturers);
-    let availability = {}
-    availabilityData.forEach(manufacturerData => {
-        let manufacturer = manufacturerData[0]
-        let manufacturerAvailability = manufacturerData[1]
-        availability[manufacturer] = getProductInstockValue(manufacturerAvailability);
-    })
-
-    finalProductData = []
-    for(productCategory of productData) {
-        let items = mergeProductAndAvailabilityData(productCategory, availability)
-        finalProductData.push(items)
-    }
-    let start = process.hrtime()
-    let result = await storeData(finalProductData);
-    console.log(process.hrtime(start));
-    redisClient.quit()
-    process.exit(0);
-}
-
-
-composeData()
+    return productData;
+};

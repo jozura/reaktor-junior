@@ -5,14 +5,12 @@ const app = express();
 const redis = require('redis');
 const { fork } = require('child_process');
 
-const child = fork(__dirname + "/src/composeData");
+const child = fork(__dirname + "/src/updateDB.js");
 const redisClient = redis.createClient({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT || 6379,
     password: process.env.REDIS_PASS 
 });
-
-redisClient.set('test', 'value')
 
 app.get('/products/:productCategory', (req, res) => {
   let category = req.params.productCategory;
