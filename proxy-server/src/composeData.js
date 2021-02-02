@@ -13,7 +13,7 @@ const redisClient = redis.createClient({
     password: process.env.REDIS_PASS 
 });
 
-const hmset = promisify(redisClient.hmset).bind(redisClient);
+const hsetAsync = promisify(redisClient.hset).bind(redisClient);
 
 
 async function getAllProducts() {
@@ -95,7 +95,6 @@ function getProductInstockValue(availabilityData){
         let instockValueStartIndex = dataPayload.indexOf(instockTag) + instockTagLength;
         let tempString = dataPayload.substring(instockValueStartIndex);
         let instockValue = tempString.substring(0, tempString.indexOf("<"));
-        console.log(productId, instockValue);
         instockMap[productId] = instockValue;
     }
 
@@ -113,16 +112,20 @@ function mergeProductAndAvailabilityData(productsOfCategory, availability){
     return products;
 }
 
-async function storeData(finalProductData){
-    for (productCategory of finalProductData){
+function storeData(finalProductData){
+    let promises = []
+    for(productCategory of finalProductData){
         category = productCategory[0].type
-        let jsonobjs = []
-        for(product of productCategory){
-            jsonobjs.push(product)
-        }
-        console.log(category);
-        redisClient.set(category, JSON.stringify(jsonobjs), redis.print);
+        productCategory.forEach(product => {
+            let productId = product.id;
+            promises.push(hsetAsync(category,
+                             productId,
+                             JSON.stringify(product)
+                             ));
+        });
     }
+
+    return Promise.allSettled(promises);
 }
 
 async function composeData(){
@@ -142,9 +145,11 @@ async function composeData(){
         let items = mergeProductAndAvailabilityData(productCategory, availability)
         finalProductData.push(items)
     }
-
-    storeData(finalProductData);
-    return finalProductData;
+    let start = process.hrtime()
+    let result = await storeData(finalProductData);
+    console.log(process.hrtime(start));
+    redisClient.quit()
+    process.exit(0);
 }
 
 
