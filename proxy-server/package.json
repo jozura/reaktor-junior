@@ -4,7 +4,7 @@
   "description": "A proxy server that composes two legacy APIs into one API",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha --timeout 2000000",
     "start": "node index.js"
   },
   "author": "Johannes Haapakoski",
@@ -15,5 +15,12 @@
     "express": "^4.17.1",
     "nodemon": "^2.0.7",
     "redis": "^3.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^8.2.1",
+    "mocha-suppress-logs": "^0.2.0",
+    "nock": "^13.0.7",
+    "rewire": "^5.0.0"
   }
 }
