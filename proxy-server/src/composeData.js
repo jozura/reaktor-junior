@@ -41,7 +41,7 @@ function getManufacturers(products) {
 
     for(productCategory of products){
         productCategory.forEach(product => {
-            manufacturers.add(product.manufacturer);
+            if(product.manufacturer) manufacturers.add(product.manufacturer);
         });
     }
 
@@ -53,15 +53,10 @@ async function fetchManufacturerAvailability(manufacturer, tries = 5){
         throw new Error(`Failed to get availability data for ${manufacturer}.`);
     }
 
-    let response;
-    try {
-        response = await axios.get(`${API_SERVICE_URL}/availability/${manufacturer}`);
-    } catch (error) {
-        throw new Error(error);
-    }
-
+    let response = await axios.get(`${API_SERVICE_URL}/availability/${manufacturer}`);
     let availabilityData = response.data.response;
     if(availabilityData) {
+        // Availability API sometime bugs out and returns an empty list
         if(availabilityData !== "[]") {
             return availabilityData;
         } else {
