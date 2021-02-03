@@ -109,16 +109,16 @@ describe("composeData.js", () => {
     });
 
     describe(`fetchManufacturerAvailability()`, () => {
-        afterEach(() => {
-            nock.cleanAll();
-        });
+        //afterEach(() => {
+        //    nock.cleanAll();
+        //});
 
         it('Should throw if availability API returns an empty list too many times.', async () => {
-            mockAPI.get(`/availability/test`)
+            mockAPI.get(`/availability/test`).times(5)
             .reply(200, {
                 code: 200,
                 response: "[]"
-            }).persist()
+            })
             await expect(fetchManufacturerAvailability('test')).to.be
                 .rejectedWith(Error);
         });
@@ -144,7 +144,7 @@ describe("composeData.js", () => {
             let availabilityData = await fetchManufacturerAvailability('test');
             expect(availabilityData[0]).to.eql({id: "4C0CF8BA2470BE252EF3BA12",
             DATAPAYLOAD: "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"});
-        })
+        });
 
         it('Should return data even if the API bugs out a few times.', async () => {
             mockAPI.get('/availability/test')
@@ -158,6 +158,7 @@ describe("composeData.js", () => {
                         }
                     ]
             })
+
             mockAPI.get('/availability/test').times(4)
             .reply(200, {
                 code: 200,
@@ -167,6 +168,49 @@ describe("composeData.js", () => {
             let availabilityData = await fetchManufacturerAvailability('test');
             expect(availabilityData[0]).to.eql({id: "4C0CF8BA2470BE252EF3BA12",
             DATAPAYLOAD: "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"});
-        })
+        });
     });
-})
+
+    describe('fetchAvailabilityData(manufacturers)', () => {
+        suppressLogs();
+
+        it('Should return an empty list for an empty list of manufacturers.', async () => {
+            let availabilityData = await fetchAvailabilityData([]);
+            expect(availabilityData).to.eql([]);
+        });
+
+        it(`Should return a list with availability data for each manufacturer
+        for which the data is available`, async () => {
+            mockAPI.get("/availability/test1").reply(
+                200, {
+                    code: 200,
+                    response: "passed"
+                }
+            );
+
+            mockAPI.get("/availability/test2").reply(
+                200, {
+                    code: 200,
+                    response: "[]"
+                }
+            );
+
+            mockAPI.get("/availability/test3").reply(
+                200, {
+                    code: 200,
+                    response: "passed"
+                }
+            );
+
+            mockAPI.get("/availability/test4").reply(
+                500, {
+                }
+            );
+
+            manufacturers = ["test1", "test2", "test3", "test4"];
+
+            let availabilityData = await fetchAvailabilityData(manufacturers);
+            expect(availabilityData).to.eql([["test1", "passed"], ["test3", "passed"]])
+        });
+    });
+});
