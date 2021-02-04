@@ -246,7 +246,7 @@ describe("composeData.js", () => {
                 "id": "E42422D1222E746E745",
                 "DATAPAYLOAD": "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>LESSTHAN10</INSTOCKVALUE>\n</AVAILABILITY>"
             }
-            ]]]
+            ]]];
 
             let instockData = getInstockData(availabilityData);
             let expectedOutput = {
@@ -271,9 +271,9 @@ describe("composeData.js", () => {
     describe("appendInstockDataToProducts(products, instockData)", () => {
         it(`Should return a list of lists of products for each product category
         where the products have the instock field added to them.`, () => {
-            let p1 = {id: "testid1", type: "gloves", name: "name1", color: ["blue"], price: 10, manufacturer: "manufacturer1"}
-            let p2 = {id: "testid2", type: "facemasks", name: "name2", color: ["blue"], price: 10, manufacturer: "manufacturer2"}
-            let p3 = {id: "testid3", type: "gloves", name: "name3", color: ["blue"], price: 10, manufacturer: "manufacturer2"}
+            let p1 = {id: "testid1", type: "gloves", name: "name1", color: ["blue"], price: 10, manufacturer: "manufacturer1"};
+            let p2 = {id: "testid2", type: "facemasks", name: "name2", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
+            let p3 = {id: "testid3", type: "gloves", name: "name3", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
 
             instockData = {
                 "manufacturer1":
@@ -299,6 +299,56 @@ describe("composeData.js", () => {
            
             expectedOutput = [[p2c], [p1c, p3c]];
             expect(products).to.eql(expectedOutput);
-        })
-    })
+        });
+    });
+
+    describe("composeData()", () => {
+        suppressLogs();
+
+        it("Should return the same number of products as initially are fetched from the products API", async () => {
+            let p1 = {id: "testid1", type: "gloves", name: "name1", color: ["blue"], price: 10, manufacturer: "manufacturer1"};
+            let p2 = {id: "testid2", type: "facemasks", name: "name2", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
+            let p3 = {id: "testid3", type: "gloves", name: "name3", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
+          
+
+            mockAPI.get('/products/gloves').times(2).reply(200, [
+                p1, p3
+            ]);
+
+            mockAPI.get('/products/facemasks').times(2).reply(200, [
+                p2
+            ]);
+
+            mockAPI.get('/products/beanies').times(2).reply(500, []);
+
+            mockAPI.get('/availability/manufacturer1').reply(200, {
+                "code": "200",
+                "response": [
+                    {id: "TESTID1",
+                    DATAPAYLOAD: "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"},
+                    {id: "TESTID4",
+                    DATAPAYLOAD: "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"}
+                ]
+            }).persist();
+
+            mockAPI.get('/availability/manufacturer2').reply(200, {
+                "code": "200",
+                "response": [
+                    {id: "TESTID2",
+                    DATAPAYLOAD: "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"},
+                    {id: "TESTID3",
+                    DATAPAYLOAD: "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"}
+                ]
+            });
+            let nProducts;
+            let products = await fetchProducts();
+            products.forEach(productCategory => {nProducts += productCategory.length});
+            console.log(products);
+            let nComposedProducts;
+            let composedProducts = await composeData();
+            composedProducts.forEach(productCategory => {nComposedProducts += productCategory.length});
+
+            expect(nComposedProducts).to.eql(nProducts);
+        });
+    });
 });
