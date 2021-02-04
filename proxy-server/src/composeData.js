@@ -82,12 +82,12 @@ async function fetchAvailabilityData(manufacturers) {
     return availabilityData;
 };
 
-function getInstockValue(productData) {
+function getInstockValue(productAvailabilityData) {
     let instockTag = "<INSTOCKVALUE>";
     let instockTagLength = instockTag.length;
 
-    let instockValueStartIndex = productData.indexOf(instockTag) + instockTagLength;
-    let tempString = productData.substring(instockValueStartIndex);
+    let instockValueStartIndex = productAvailabilityData.indexOf(instockTag) + instockTagLength;
+    let tempString = productAvailabilityData.substring(instockValueStartIndex);
     let instockValue = tempString.substring(0, tempString.indexOf("<"));
 
     return instockValue;
@@ -115,18 +115,18 @@ function getInstockData(availabilityData){
 };
 
 function appendInstockDataToProducts(products, instockData){
-    let productData = [];
+    let productsWithInstockData = [];
     for(productCategory of products) {
-        let productsOfCategory = [];
+        let productCategoryWithInstockData = [];
 
         productCategory.forEach(product => {
             let manufacturer = product.manufacturer;
             // Availability API has product IDs in all uppercase hence 'id.toUpperCase'
             product["availability"] = instockData[manufacturer][product.id.toUpperCase()];
-            productsOfCategory.push(product);
+            productCategoryWithInstockData.push(product);
         })
-        productData.push(productsOfCategory);
+        productsWithInstockData.push(productCategoryWithInstockData);
     }
 
-    return productData;
+    return productsWithInstockData;
 };

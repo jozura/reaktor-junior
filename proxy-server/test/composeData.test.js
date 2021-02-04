@@ -78,7 +78,7 @@ describe("composeData.js", () => {
         });
     });
 
-    describe("getManufacturers()", () => {
+    describe("getManufacturers(products)", () => {
         it(`Should find all the manufacturers from product data`, () => {
             let mockProducts = [
                 [{manufacturer: 'a'}, {manufacturer: 'b'}],
@@ -108,11 +108,7 @@ describe("composeData.js", () => {
         });
     });
 
-    describe(`fetchManufacturerAvailability()`, () => {
-        //afterEach(() => {
-        //    nock.cleanAll();
-        //});
-
+    describe(`fetchManufacturerAvailability(manufacturer)`, () => {
         it('Should throw if availability API returns an empty list too many times.', async () => {
             mockAPI.get(`/availability/test`).times(5)
             .reply(200, {
@@ -157,7 +153,7 @@ describe("composeData.js", () => {
                             "DATAPAYLOAD": "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"
                         }
                     ]
-            })
+            });
 
             mockAPI.get('/availability/test').times(4)
             .reply(200, {
@@ -210,7 +206,99 @@ describe("composeData.js", () => {
             manufacturers = ["test1", "test2", "test3", "test4"];
 
             let availabilityData = await fetchAvailabilityData(manufacturers);
-            expect(availabilityData).to.eql([["test1", "passed"], ["test3", "passed"]])
+            expect(availabilityData).to.eql([["test1", "passed"], ["test3", "passed"]]);
         });
     });
+
+    describe("getInstockValue(productAvailabilityData)", () => {
+        it("Should return the instock value", () => {
+            let productAvailabilityData = "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>LESSTHAN10</INSTOCKVALUE>\n</AVAILABILITY>";
+            let instockValue = getInstockValue(productAvailabilityData);
+
+            expect(instockValue).to.eql("LESSTHAN10")
+        });
+    
+        it("Should return empty string if no instock value exists", () => {
+            let productAvailabilityData = "<TEST>test</TEST>";
+            let instockValue = getInstockValue(productAvailabilityData);
+
+            expect(instockValue).to.eql('');
+        });
+    });
+
+    describe("getInstockData(availabilityData)", () => {
+       it("Should return a map for each manufacturer that contains product ids and their instock values", () => {
+           let availabilityData = [["manufacturer1", [
+            {
+                "id": "F00F2E90CD7D537EF4",
+                "DATAPAYLOAD": "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"
+            },
+            {
+                "id": "C4142ED1E7EE746E745",
+                "DATAPAYLOAD": "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"
+            }]],
+                                   ["manufacturer2", [            
+            {
+                "id": "505F2550C234537AG4",
+                "DATAPAYLOAD": "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>"
+            },
+            {
+                "id": "E42422D1222E746E745",
+                "DATAPAYLOAD": "<AVAILABILITY>\n  <CODE>200</CODE>\n  <INSTOCKVALUE>LESSTHAN10</INSTOCKVALUE>\n</AVAILABILITY>"
+            }
+            ]]]
+
+            let instockData = getInstockData(availabilityData);
+            let expectedOutput = {
+                "manufacturer1": {
+                    "F00F2E90CD7D537EF4": "INSTOCK",
+                    "C4142ED1E7EE746E745": "INSTOCK"                                      
+                },
+                "manufacturer2": {
+                    "505F2550C234537AG4": "INSTOCK",
+                    "E42422D1222E746E745": "LESSTHAN10"
+                }
+            };
+
+            expect(instockData).to.eql(expectedOutput);
+       });
+
+       it("Should return an empty object if passed an empty list", () => {
+            expect(getInstockData([])).to.eql({});
+       });
+    });
+
+    describe("appendInstockDataToProducts(products, instockData)", () => {
+        it(`Should return a list of lists of products for each product category
+        where the products have the instock field added to them.`, () => {
+            let p1 = {id: "testid1", type: "gloves", name: "name1", color: ["blue"], price: 10, manufacturer: "manufacturer1"}
+            let p2 = {id: "testid2", type: "facemasks", name: "name2", color: ["blue"], price: 10, manufacturer: "manufacturer2"}
+            let p3 = {id: "testid3", type: "gloves", name: "name3", color: ["blue"], price: 10, manufacturer: "manufacturer2"}
+
+            instockData = {
+                "manufacturer1":
+                {
+                    "TESTID1": "INSTOCK"
+                },
+                "manufacturer2": 
+                {
+                    "TESTID2": "INSTOCK",
+                    "TESTID3": "INSTOCK"
+                }
+            };
+
+            let products = [[p2], [p1, p3]];
+            products = appendInstockDataToProducts(products, instockData);
+            let p1c, p2c, p3c;
+            p1c = {...p1};
+            p2c = {...p2};
+            p3c = {...p3};
+            p1c["availability"] = "INSTOCK";
+            p2c["availability"] = "INSTOCK";
+            p3c["availability"] = "INSTOCK";
+           
+            expectedOutput = [[p2c], [p1c, p3c]];
+            expect(products).to.eql(expectedOutput);
+        })
+    })
 });
