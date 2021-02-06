@@ -33,7 +33,7 @@ async function main(){
     let productData = await composeData();
     await storeData(productData);
     redisClient.quit();
-    console.log('DB updated')
+
     process.exit(0);
 }
 

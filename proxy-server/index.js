@@ -3,9 +3,11 @@ require('dotenv').config()
 const express = require('express');
 const app = express();
 const redis = require('redis');
-const { fork } = require('child_process');
+const {DbUpdateScheduler} = require('./src/DbUpdateScheduler');
 
-const child = fork(__dirname + "/src/updateDB.js");
+let update = new DbUpdateScheduler(100000, 30000);
+update.spawnProcess();
+
 const redisClient = redis.createClient({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT || 6379,
