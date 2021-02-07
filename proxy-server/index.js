@@ -3,6 +3,10 @@ require('dotenv').config()
 const express = require('express');
 const app = express();
 const redis = require('redis');
+const cors = require('cors');
+
+app.use(cors());
+
 const {DbUpdateScheduler} = require('./src/DbUpdateScheduler');
 
 let update = new DbUpdateScheduler(100000, 100000);
@@ -19,7 +23,7 @@ app.get('/products/:productCategory', (req, res) => {
   redisClient.hvals(category, (err, repl) => {
     if (err) throw err;
     console.log(repl.length)
-    res.send(`<h1>${JSON.stringify(repl)}</h1>`)
+    res.send(JSON.stringify(repl))
   })
 })
 

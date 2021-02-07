@@ -21,7 +21,7 @@ class DbUpdateScheduler extends EventEmitter{
                 console.log('Database updated successfully.', code, elapsedTime / 1000, timeToNext / 1000);
                 setTimeout(this.spawnProcess.bind(this) , this.interval - elapsedTime );
             } else {
-                console.log('Update process timed out.')
+                console.log('Update process timed out.', code)
                 this.spawnProcess();
             }
         })
