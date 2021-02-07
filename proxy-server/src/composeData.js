@@ -23,14 +23,10 @@ async function fetchProducts() {
     let productRequests = PRODUCT_CATEGORIES.map((category) =>
         axios.get(`${API_SERVICE_URL}/products/${category}`));
 
-    let results = await Promise.allSettled(productRequests);
+    let results = await Promise.all(productRequests);
     let productData = [];
-    results.forEach((result) => {
-        if(result.status === "fulfilled") {
-            productData.push(result.value.data);
-        } else {
-            console.error(result.reason);
-        }
+    results.forEach((result, i) => {
+        productData.push(result.data);
     });
 
     return productData;
@@ -69,14 +65,10 @@ async function fetchManufacturerAvailability(manufacturer, tries = 5){
 
 async function fetchAvailabilityData(manufacturers) {
     let requests = manufacturers.map(manufacturer => fetchManufacturerAvailability(manufacturer));
-    let results = await Promise.allSettled(requests);
+    let results = await Promise.all(requests);
     let availabilityData = [];
     results.forEach((result, i) => {
-        if(result.status === "fulfilled") {
-            availabilityData.push([manufacturers[i], result.value]);
-        } else {
-            console.error(result.reason);
-        }
+        availabilityData.push([manufacturers[i], result]);
     });
 
     return availabilityData;

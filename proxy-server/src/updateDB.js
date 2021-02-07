@@ -47,11 +47,11 @@ async function updatePreviousIds(category, newIds) {
 async function storeData(productData){
     let promises = [];
     for(productCategory of productData){
-        let ids = []
+        let ids = [];
         category = productCategory[0].type;
         productCategory.forEach(product => {
             let id = product.id;
-            ids.push(id)
+            ids.push(id);
             let category = product.type;
             promises.push(hsetAsync(category,
                              id,
@@ -66,7 +66,16 @@ async function storeData(productData){
 };
 
 async function main(){
-    let productData = await composeData();
+    let productData;
+    try {
+        productData = await composeData();
+    } catch (error) {
+        console.error(error);
+        redisClient.quit();
+        // In this case do something in the scheduler
+        process.exit(1);
+    }
+         
     await storeData(productData);
 
     redisClient.quit();
