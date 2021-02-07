@@ -5,20 +5,20 @@ const app = express();
 const redis = require('redis');
 const {DbUpdateScheduler} = require('./src/DbUpdateScheduler');
 
-let update = new DbUpdateScheduler(100000, 30000);
+let update = new DbUpdateScheduler(100000, 100000);
 update.spawnProcess();
 
 const redisClient = redis.createClient({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASS 
+    password: process.env.REDIS_PASS
 });
 
 app.get('/products/:productCategory', (req, res) => {
   let category = req.params.productCategory;
-  redisClient.hgetall(category, (err, repl) => {
+  redisClient.hvals(category, (err, repl) => {
     if (err) throw err;
-    console.log(repl)
+    console.log(repl.length)
     res.send(`<h1>${JSON.stringify(repl)}</h1>`)
   })
 })
