@@ -16,30 +16,30 @@ const unlinkAsync = promisify(redisClient.unlink).bind(redisClient);
 const hdelAsync = promisify(redisClient.hdel).bind(redisClient);
 const saddAsync = promisify(redisClient.sadd).bind(redisClient);
 
-// Deleted products = OLDIDs - NEWIDs
-async function cleanDeletedProducts(category, newIds){
-    // Get deleted products
-    // remove deleted products from category
-    // unlink previousIds
-    // save new ids
+async function removeDeletedProducts(category, newIds){
     let previousIds = await smembersAsync(`prev:${category}`);
+
     let prevSet = new Set(previousIds);
     let newSet = new Set(newIds);
+
     // Set difference (prevSet / newSet)
     let deletedIds = new Set([...prevSet].filter(id => !newSet.has(id)));
-    let promises = []
-    console.log(deletedIds);
+
+    let promises = [];
     deletedIds.forEach((id) => {
         promises.push(hdelAsync(category, id));
     });
 
     await Promise.allSettled(promises);
-    await unlinkAsync(`prev:${category}`);
-    let newPromises = []
+}
+
+async function updatePreviousIds(category, newIds) {
+     await unlinkAsync(`prev:${category}`);
+
+    let newPromises = [];
     newIds.forEach(id => {
         newPromises.push(saddAsync(`prev:${category}`, id)); 
-    })
-
+    });
 
     await Promise.allSettled(newPromises);
 }
@@ -58,7 +58,8 @@ async function storeData(productData){
                              JSON.stringify(product))
             );
         });
-        await cleanDeletedProducts(category, ids);
+        await removeDeletedProducts(category, ids);
+        await updatePreviousIds(category, ids);
     }
 
     await Promise.allSettled(promises);
@@ -67,8 +68,8 @@ async function storeData(productData){
 async function main(){
     let productData = await composeData();
     await storeData(productData);
-    redisClient.quit();
 
+    redisClient.quit();
     process.exit(0);
 }
 
