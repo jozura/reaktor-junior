@@ -11,12 +11,10 @@ const redisClient = redis.createClient({
     password: process.env.REDIS_PASS
 });
 
-const smembersAsync = promisify(redisClient.smembers).bind(redisClient);
+const hkeysAsync = promisify(redisClient.hkeys).bind(redisClient);
 
-async function removeDeletedProducts(category, newIds, commandQueue){
-    let previousIds = await smembersAsync(`prev:${category}`);
-
-    let prevSet = new Set(previousIds);
+function removeDeletedProducts(category, prevIds, newIds, commandQueue) {
+    let prevSet = new Set(prevIds);
     let newSet = new Set(newIds);
 
     // Set difference (prevSet / newSet)
@@ -29,27 +27,17 @@ async function removeDeletedProducts(category, newIds, commandQueue){
     return commandQueue;
 }
 
-function updatePreviousIds(category, newIds, commandQueue) {
-    commandQueue.unlink(`prev:${category}`);
-
-    newIds.forEach(id => {
-        commandQueue.sadd(`prev:${category}`, id); 
-    });
-
-    return commandQueue
-}
-
-function getProductIds(productCategory){
+function getProductIds(productsOfCategory){
     let ids = [];
-    productCategory.forEach(product => {
+    productsOfCategory.forEach(product => {
         ids.push(product.id);
     });
 
     return ids;
 }
 
-function storeProducts(productCategory, categoryName, commandQueue) {
-    productCategory.forEach(product => {
+function storeProducts(productsOfCategory, categoryName, commandQueue) {
+    productsOfCategory.forEach(product => {
         commandQueue.hset(categoryName,
                          product.id,
                          JSON.stringify(product))
@@ -60,42 +48,33 @@ function storeProducts(productCategory, categoryName, commandQueue) {
 
 async function queueDbCommands(productData, commandQueue){
     for(let i = 0; i < productData.length; ++i) {
-        let productCategory = productData[i];
+        let productsOfCategory = productData[i];
         let categoryName = PRODUCT_CATEGORIES[i];
-        let ids = getProductIds(productCategory);
-        commandQueue = storeProducts(productCategory, categoryName, commandQueue);
-        commandQueue = await removeDeletedProducts(categoryName, ids, commandQueue);
-        commandQueue = updatePreviousIds(categoryName, ids, commandQueue);
+        let newIds = getProductIds(productsOfCategory);
+        let prevIds = await hkeysAsync(categoryName);
+        commandQueue = storeProducts(productsOfCategory, categoryName, commandQueue);
+        commandQueue = removeDeletedProducts(categoryName, prevIds, newIds, commandQueue);
     }
 
     return commandQueue
 };
 
 async function main(){
-    let commandQueue;
+    let commandQueue = redisClient.multi();
     try {
-        commandQueue = redisClient.multi();
         let productData = await composeData();
         commandQueue = await queueDbCommands(productData, commandQueue);
+
+        const executeCommands = promisify(commandQueue.exec).bind(commandQueue);
+        await executeCommands();
     } catch (error) {
         console.error(error);
         redisClient.quit();
-        // In this case do something in the scheduler
         process.exit(1);
     }
-    
 
-    commandQueue.exec(function (error, results) {
-        if(error) {
-            console.error(error);
-            redisClient.quit();
-            // In this case do something in the scheduler
-            process.exit(1);
-        }
-        redisClient.quit();
-        process.exit(0);
-
-    })
+    redisClient.quit();
+    process.exit(0);
 }
 
 main();

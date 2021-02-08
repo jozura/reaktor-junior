@@ -4,13 +4,13 @@ module.exports = {
 };
 
 async function composeData(){
-    let products = await fetchProducts();
-    let manufacturers = getManufacturers(products);
+    let productData = await fetchProducts();
+    let manufacturers = getManufacturers(productData);
     let availabilityData = await fetchAvailabilityData(manufacturers);
     let instockData = getInstockData(availabilityData);
-    products = appendInstockDataToProducts(products, instockData);
+    productData = appendInstockDataToProducts(productData, instockData);
 
-    return products;
+    return productData;
 }
 
 const axios = require("axios");
@@ -32,11 +32,11 @@ async function fetchProducts() {
     return productData;
 };
 
-function getManufacturers(products) {
+function getManufacturers(productData) {
     let manufacturers = new Set();
 
-    for(productCategory of products){
-        productCategory.forEach(product => {
+    for(productsOfCategory of productData){
+        productsOfCategory.forEach(product => {
             if(product.manufacturer) manufacturers.add(product.manufacturer);
         });
     }
@@ -106,18 +106,18 @@ function getInstockData(availabilityData){
     return instockMap;
 };
 
-function appendInstockDataToProducts(products, instockData){
+function appendInstockDataToProducts(productData, instockData){
     let productsWithInstockData = [];
-    for(productCategory of products) {
-        let productCategoryWithInstockData = [];
+    for(productsOfCategory of productData) {
+        let productsOfCategoryWithInstockData = [];
 
-        productCategory.forEach(product => {
+        productsOfCategory.forEach(product => {
             let manufacturer = product.manufacturer;
             // Availability API has product IDs in all uppercase hence 'id.toUpperCase'
             product["availability"] = instockData[manufacturer][product.id.toUpperCase()];
-            productCategoryWithInstockData.push(product);
+            productsOfCategoryWithInstockData.push(product);
         })
-        productsWithInstockData.push(productCategoryWithInstockData);
+        productsWithInstockData.push(productsOfCategoryWithInstockData);
     }
 
     return productsWithInstockData;
