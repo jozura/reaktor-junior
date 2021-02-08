@@ -30,7 +30,7 @@ describe("composeData.js", () => {
             expect(productCategories.length).to.eql(productData.length);
         });
 
-        it("Each product category list should contain Product type objects", async () => {
+        it("Each product category list should contain Product type objects.", async () => {
             let productData = await fetchProducts();
             let products = productData.flat();
             let success = true;
@@ -45,12 +45,11 @@ describe("composeData.js", () => {
             expect(success).to.eql(true);
         });
 
-        it(`Should return a list with as many lists as requests that
-        get response 2XX`,
+        it(`Should throw if even one of the requests fail.`,
         async () => {
             let productCategories = constants.PRODUCT_CATEGORIES;
             productCategories.forEach((productCategory, i) => {
-                let statusCode = i === 0 ? 200 : 500;
+                let statusCode = i === 0 ? 500 : 200;
                 mockAPI.get(`/products/${productCategory}`)
                 .reply(statusCode, {
                     data: [
@@ -58,47 +57,17 @@ describe("composeData.js", () => {
                     ] 
                 })
             });
-            let products = await fetchProducts();            
-            expect(products.length).to.eql(1);
+
+            await expect(fetchProducts()).to.be
+                .rejectedWith(Error);
         });
 
-        it(`Should return an empty list if API response status code
-        does not equal 2XX for any of the requests`,
-        async () => {
-            let productCategories = constants.PRODUCT_CATEGORIES;
-            productCategories.forEach((productCategory) => {
-                mockAPI.get(`/products/${productCategory}`)
-                .reply(500, {
-                    data: "test"
-                })
-            });
-            let productData = await fetchProducts();
-
-            expect(productData).to.eql([]);
-        });
     });
 
     describe("getManufacturers(products)", () => {
-        it(`Should find all the manufacturers from product data`, () => {
+        it(`Should find all the manufacturers from product data.`, () => {
             let mockProducts = [
                 [{manufacturer: 'a'}, {manufacturer: 'b'}],
-                [{manufacturer: 'c'}, {manufacturer: 'b'}],
-                [{manufacturer: 'a'}, {manufacturer: 'c'}]
-            ];
-            let manufacturers = ['a', 'b', 'c'];
-            let foundManufacturers = getManufacturers(mockProducts);
-            expect(foundManufacturers).to.have.members(manufacturers);
-        });
-
-        it(`Should return an empty list if products argument is an empty list`, () => {
-            let mockProducts = [];
-            let foundManufacturers = getManufacturers(mockProducts);
-            expect(foundManufacturers).to.eql([]);
-        });
-
-        it(`Shouldn't crash even if a product object doesnt have a manufacturer field`, () => {
-            let mockProducts = [
-                [{}, {manufacturer: 'b'}],
                 [{manufacturer: 'c'}, {manufacturer: 'b'}],
                 [{manufacturer: 'a'}, {manufacturer: 'c'}]
             ];
@@ -170,13 +139,8 @@ describe("composeData.js", () => {
     describe('fetchAvailabilityData(manufacturers)', () => {
         suppressLogs();
 
-        it('Should return an empty list for an empty list of manufacturers.', async () => {
-            let availabilityData = await fetchAvailabilityData([]);
-            expect(availabilityData).to.eql([]);
-        });
-
         it(`Should return a list with availability data for each manufacturer
-        for which the data is available`, async () => {
+        for which the data is available.`, async () => {
             mockAPI.get("/availability/test1").reply(
                 200, {
                     code: 200,
@@ -187,26 +151,40 @@ describe("composeData.js", () => {
             mockAPI.get("/availability/test2").reply(
                 200, {
                     code: 200,
-                    response: "[]"
+                    response: "passed"
                 }
             );
 
-            mockAPI.get("/availability/test3").reply(
+            manufacturers = ["test1", "test2"];
+
+            let availabilityData = await fetchAvailabilityData(manufacturers);
+            expect(availabilityData).to.eql([["test1", "passed"], ["test2", "passed"]]);
+        });
+
+        it(`Should throw if even one of the requests fail.`, async () => {
+            mockAPI.get("/availability/test1").reply(
                 200, {
                     code: 200,
                     response: "passed"
                 }
             );
 
-            mockAPI.get("/availability/test4").reply(
+            mockAPI.get("/availability/test2").reply(
+                200, {
+                    code: 200,
+                    response: "passed"
+                }
+            );
+
+            mockAPI.get("/availability/test3").reply(
                 500, {
                 }
             );
 
-            manufacturers = ["test1", "test2", "test3", "test4"];
+            manufacturers = ["test1", "test2", "test3"];
 
-            let availabilityData = await fetchAvailabilityData(manufacturers);
-            expect(availabilityData).to.eql([["test1", "passed"], ["test3", "passed"]]);
+            await expect(fetchAvailabilityData(manufacturers)).to.be
+                .rejectedWith(Error);
         });
     });
 
@@ -216,13 +194,6 @@ describe("composeData.js", () => {
             let instockValue = getInstockValue(productAvailabilityData);
 
             expect(instockValue).to.eql("LESSTHAN10")
-        });
-    
-        it("Should return empty string if no instock value exists", () => {
-            let productAvailabilityData = "<TEST>test</TEST>";
-            let instockValue = getInstockValue(productAvailabilityData);
-
-            expect(instockValue).to.eql('');
         });
     });
 
@@ -261,10 +232,6 @@ describe("composeData.js", () => {
             };
 
             expect(instockData).to.eql(expectedOutput);
-       });
-
-       it("Should return an empty object if passed an empty list", () => {
-            expect(getInstockData([])).to.eql({});
        });
     });
 
@@ -305,10 +272,11 @@ describe("composeData.js", () => {
     describe("composeData()", () => {
         suppressLogs();
 
-        it("Should return the same number of products as initially are fetched from the products API", async () => {
+        it("Should return the same number of products as initially are fetched from the products API.", async () => {
             let p1 = {id: "testid1", type: "gloves", name: "name1", color: ["blue"], price: 10, manufacturer: "manufacturer1"};
             let p2 = {id: "testid2", type: "facemasks", name: "name2", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
             let p3 = {id: "testid3", type: "gloves", name: "name3", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
+            let p4 = {id: "testid4", type: "beanies", name: "name4", color: ["blue"], price: 10, manufacturer: "manufacturer2"};
           
 
             mockAPI.get('/products/gloves').times(2).reply(200, [
@@ -319,7 +287,10 @@ describe("composeData.js", () => {
                 p2
             ]);
 
-            mockAPI.get('/products/beanies').times(2).reply(500, []);
+            mockAPI.get('/products/beanies').times(2).reply(200, [
+                p4 
+            ]);
+
 
             mockAPI.get('/availability/manufacturer1').reply(200, {
                 "code": "200",
