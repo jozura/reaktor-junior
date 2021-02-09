@@ -1,38 +1,40 @@
 .App {
+  height: 100%;
+  background-color: white;
+}
+
+.GridHeader {
+  display: grid;
+  grid-template-columns: 150px 200px 300px 100px 100px 150px;
+  grid-template-rows: 1fr;
+  gap: 0px 0px;
+  grid-template-areas:
+    ". . . . . .";
+}
+
+.ListWrapper {
+  width: 1015px;
+  height: 90%;
+  margin: auto;
   text-align: center;
+  background-color: #52057b;
+
+  scrollbar-color: yellow red;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.ListItemOdd {
+  padding-top:15px;
+  background-color: #52057b;
+  color: rgb(211, 178, 200);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.ListItemEven {
+  padding-top:15px;
+  background-color: #892cdc;
+  color:black;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+#root {
+  height: 100vh;
 }

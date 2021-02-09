@@ -18,13 +18,35 @@ const redisClient = redis.createClient({
     password: process.env.REDIS_PASS
 });
 
+// JSON.stringify doesn't work correctly on a list of already stringified
+// JSON objects, therefore this is required. (Products are stored as
+// stringified JSON objects in the Redis database.)
+function jsonStringify(redisReply){
+  let response = '['
+    redisReply.forEach((r, i) => {
+      if(i === redisReply.length - 1){
+        response = response.concat(`${r}]`);
+      } else {
+        response = response.concat(`${r}, `);
+      }
+  })
+  return response;
+}
+
 app.get('/products/:productCategory', (req, res) => {
   let category = req.params.productCategory;
   redisClient.hvals(category, (err, repl) => {
-    if (err) throw err;
-    console.log(repl.length)
-    res.send(JSON.stringify(repl))
-  })
+    if (err) {
+      console.error(err);
+      res.status(500).send({
+        message: err
+      });
+    } else {
+      let response = jsonStringify(repl);
+      res.setHeader('Content-Type', 'application/json');
+      res.send(response);
+    }
+  });
 })
 
 const port = 8080;
