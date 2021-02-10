@@ -3,6 +3,7 @@ import {AutoSizer} from "react-virtualized";
 
 const properties = ['name', 'availability', 'id', 'manufacturer', 'price', 'color'];
 const columnWidths = [150, 200, 300, 100, 100, 150];
+const gridHeaderHeight = 20;
 
 const Cell = ({ data, columnIndex, rowIndex, style }) => { 
     let value = data[rowIndex][properties[columnIndex]]
@@ -20,7 +21,7 @@ export default function ProductsGrid({products}) {
            className="Grid"
            columnCount={6}
            columnWidth={index => columnWidths[index]}
-           height={height}
+           height={height - gridHeaderHeight}
            rowCount={products.length}
            rowHeight={() => 50}
            width={width}

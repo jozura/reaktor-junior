@@ -8,7 +8,6 @@ export default function GridHeader() {
     )
     return (
         <div className="GridHeader">
-            {console.log(prop)}
            {prop} 
         </div>
     )
