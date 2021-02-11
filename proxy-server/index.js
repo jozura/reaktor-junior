@@ -42,9 +42,15 @@ app.get('/products/:productCategory', (req, res) => {
         message: err
       });
     } else {
-      let response = jsonStringify(repl);
-      res.setHeader('Content-Type', 'application/json');
-      res.send(response);
+      if (repl.length) {
+        let response = jsonStringify(repl);
+        res.setHeader('Content-Type', 'application/json');
+        res.send(response);
+      } else {
+        res.status(404).send({
+          message: 'Not found'
+        });
+      }
     }
   });
 })

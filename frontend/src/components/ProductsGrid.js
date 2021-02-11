@@ -1,19 +1,21 @@
 import { VariableSizeGrid as Grid } from 'react-window';
 import {AutoSizer} from "react-virtualized";
+import * as constants from "./constants";
 
-const properties = ['name', 'availability', 'id', 'manufacturer', 'price', 'color'];
+const properties = constants.PRODUCT_PROPERTIES; 
 const columnWidths = [150, 200, 300, 100, 100, 150];
 const gridHeaderHeight = 20;
 
 const Cell = ({ data, columnIndex, rowIndex, style }) => { 
     let value = data[rowIndex][properties[columnIndex]]
-    if (columnIndex == 5) value = value.join(', ');
+    if (columnIndex === 5) value = value.join(', ');
     return (
-    <div style={style} className={rowIndex % 2 ? "ListItemOdd" : "ListItemEven"}>
+    <div style={style} className={rowIndex % 2 ? "GridRowOdd" : "GridRowEven"}>
         {value}
     </div>);
 }
 export default function ProductsGrid({products}) {
+    if(products) {
     return (
     <AutoSizer> 
     {({ height, width }) => (
@@ -32,4 +34,5 @@ export default function ProductsGrid({products}) {
         </Grid>
     )}
     </AutoSizer>);
+    }
 }

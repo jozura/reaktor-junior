@@ -1,12 +1,13 @@
-import {React} from 'react'
+import {React} from 'react';
+import * as constants from './constants';
 
-const PRODUCT_CATEGORIES = ['Beanies', 'Facemasks', 'Gloves']
+const productCategories = constants.PRODUCT_CATEGORIES;
 
 export default function Navbar({selectedCategory, selectNav}) {
     return (
-            <nav>
-                <ul>
-                    {PRODUCT_CATEGORIES.map((category, i) => 
+            <nav className='Nav'>
+                <ul className='NavList'>
+                    {productCategories.map((category, i) => 
                         <li className = {selectedCategory === category ? 'selectedNavEl' : 'NavEl'}
                         key={i}
                         onClick={() => selectNav(category)}>

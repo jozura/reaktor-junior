@@ -1,6 +1,11 @@
+#root {
+  height: 100vh;
+  margin: 0px;
+}
+
 .App {
   height: 100%;
-  background-color: #cfa8f1;
+  background-color: white;
 }
 
 .GridHeader {
@@ -10,20 +15,27 @@
   gap: 0px 0px;
   grid-template-areas:
     ". . . . . .";
+  background-color: #ffa812;
 }
 
-.ListWrapper {
+.GridWrapper {
   width: 1015px;
   height: calc(100% - 40px);
   margin: auto;
   text-align: center;
-  background-color: #52057b;
+  background-color: white;
 }
 
-.ListItemOdd {
+.GridRowOdd {
   padding-top:15px;
-  background-color: #52057b;
+  background-color: #37474F;
   color: white;
+}
+
+.GridRowEven {
+  padding-top:15px;
+  background-color: #DEE4E7;
+  color:black;
 }
 
 .selectedNavEl {
@@ -31,17 +43,11 @@
   color: black;
 }
 
-.ListItemEven {
-  padding-top:15px;
-  background-color: #892cdc;
-  color:black;
-}
-
-ul {
+.NavList {
   list-style: none;
   margin: 0;
   padding: 0;
-  background-color: black;
+  background-color: #222222;
   height: 100%;
 }
 
@@ -52,21 +58,14 @@ li {
   text-align: center;
   padding-top: 10px;
   color: white;
+  user-select: none;
+  cursor: default;
 }
 
-nav {
+.Nav {
   width: 100%;
   min-width: 1015px;
-  height: 40px;
-  background-color: blue;
+  height: 39px;
   overflow: hidden;
-}
-
-li a:hover {
-  background-color: #111111;
-}
-
-#root {
-  height: 100vh;
-  margin: 0px;
+  border-bottom: 1px solid black;
 }

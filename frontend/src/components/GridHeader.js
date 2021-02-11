@@ -1,6 +1,7 @@
-import React from 'react'
+import React from 'react';
+import * as constants from './constants';
 
-const properties = ['name', 'availability', 'id', 'manufacturer', 'price', 'color'];
+const properties = constants.PRODUCT_PROPERTIES;
 
 export default function GridHeader() {
     let prop = properties.map((property, i) => 
