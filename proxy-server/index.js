@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 
 const express = require('express');
 const app = express();
@@ -7,10 +7,9 @@ const cors = require('cors');
 
 app.use(cors());
 
-const {DbUpdateScheduler} = require('./src/DbUpdateScheduler');
+const DbUpdateScheduler = require('./src/DbUpdateScheduler');
 
-let update = new DbUpdateScheduler(100000, 100000);
-update.spawnProcess();
+DbUpdateScheduler.spawnProcess();
 
 const redisClient = redis.createClient({
     host: process.env.REDIS_HOST,
@@ -38,18 +37,15 @@ app.get('/products/:productCategory', (req, res) => {
   redisClient.hvals(category, (err, repl) => {
     if (err) {
       console.error(err);
-      res.status(500).send({
-        message: err
-      });
+      res.status(500).send({ message: err });
     } else {
       if (repl.length) {
         let response = jsonStringify(repl);
-        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Type', 'application/json')
         res.send(response);
       } else {
-        res.status(404).send({
-          message: 'Not found'
-        });
+        res.status(404)
+        res.send({ message: 'Not found' });
       }
     }
   });
