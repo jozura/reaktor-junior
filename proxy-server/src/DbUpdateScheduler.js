@@ -1,4 +1,16 @@
+/* Summary : An object that handles the execution
+ * of the database update process.
+ *
+ * Description: Starts a new update process every 5 minutes (300000ms). A new update process
+ * is not started before the last one has either finished successfully (exit code 0),
+ * failed (exit code 1) or timed out (exit code null). The update process
+ * is timed out in the case that it takes longer than 10 minutes (600000ms)
+ * to execute. If a time out happens a new update process is started immediately.
+*/
+
 const { fork } = require('child_process');
+const INTERVAL = 300000;
+const TIMEOUT = 100000;
 
 class DbUpdateScheduler{
     constructor(interval, timeout){
@@ -37,4 +49,4 @@ class DbUpdateScheduler{
     }
 }
 
-module.exports = new DbUpdateScheduler(100000, 300000);
+module.exports = new DbUpdateScheduler(INTERVAL, TIMEOUT);

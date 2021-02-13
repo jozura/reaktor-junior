@@ -1,4 +1,13 @@
-// A script that updates the database with data from the legacy APIs
+/* Summary : A script that handles storing the product data into the Redis database.
+ *
+ * Description: Each product category has it's own hash in the database. Products are
+ * stored as fields of that hash where the product id is the key and the value is the
+ * product object serialized as a JSON string.
+ * 
+ * The database commands are all executed as once as a Redis multi command. This makes
+ * each database update an atomic event. This makes it so that the API doesn't ever
+ * return partially updated data.
+*/
 
 const {composeData} = require('./composeData')
 const redis = require('redis');

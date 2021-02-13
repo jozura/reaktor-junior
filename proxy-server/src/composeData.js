@@ -1,4 +1,11 @@
-// A function that fetches and merges the product and availability data.
+/* Summary : A function that fetches data from both APIs and combines it.
+ *
+ * Description: First fetches the product data for each product category. Next finds
+ * all existing manufacturer names from the product data and fetches the availability data
+ * for each manufacturer. Finally adds the availability data to the product data and returns
+ * the composed product data.
+*/
+
 module.exports = {
     composeData: composeData
 };
